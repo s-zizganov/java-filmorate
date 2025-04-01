@@ -85,10 +85,10 @@ public class FilmController {
         }
 
         // Проверяем, что дата релиза не раньше 28 декабря 1895 года (начала кинематографа)
-        if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(LocalDate.of(1985,
+        if (film.getReleaseDate() == null || film.getReleaseDate().isBefore(LocalDate.of(1895,
                 12, 28))) {
-            log.error("Ошибка валидации: Дата релиза фильма не может быть раньше 28 декабря 1985г.");
-            throw new ValidationException("Дата релиза фильма не может быть раньше 28 декабря 1985г.");
+            log.error("Ошибка валидации: Дата релиза фильма не может быть раньше 28 декабря 1895г.");
+            throw new ValidationException("Дата релиза фильма не может быть раньше 28 декабря 1895г.");
         }
 
         // Проверяем, что продолжительность фильма положительная

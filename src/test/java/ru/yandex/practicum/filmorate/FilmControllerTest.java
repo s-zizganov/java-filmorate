@@ -157,7 +157,7 @@ class FilmControllerTest {
         Film film = new Film();
         film.setName("Film");
         film.setDescription("Description");
-        film.setReleaseDate(LocalDate.of(1985, 12, 27));
+        film.setReleaseDate(LocalDate.of(1895, 12, 27));
         film.setDuration(120);
 
         mockMvc.perform(post("/films")
@@ -166,7 +166,7 @@ class FilmControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Validation error"))
                 .andExpect(jsonPath("$.message").value("Дата релиза фильма не может быть раньше " +
-                        "28 декабря 1985г."));
+                        "28 декабря 1895г."));
     }
 
     // Тест на создание фильма с отрицательной продолжительностью.
