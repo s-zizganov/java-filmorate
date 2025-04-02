@@ -101,7 +101,7 @@ public class UserController {
         // Проверяем, существует ли пользователь
         if (!users.containsKey(user.getId())) {
             log.error("Пользователь с ID {} не найден", user.getId());
-            throw new NotFoundException("Пользователь с ID " + user.getId() + " не найден");
+            throw new NotFoundException(String.format("Пользователь с ID %d не найден", user.getId()));
         }
 
         validateUser(user); // Проверяем данные пользователя
