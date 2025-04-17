@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Класс Film представляет модель фильма в приложении Filmorate.
@@ -17,4 +19,7 @@ public class Film {
     String description;
     LocalDate releaseDate;
     int duration;
+    Set<Long> likes = new HashSet<>(); // Список ID пользователей,
+    // которые поставили лайк фильму (тип Set<Long>)
+    // Инициализируем его как пустой HashSet, чтобы избежать NullPointerException
 }

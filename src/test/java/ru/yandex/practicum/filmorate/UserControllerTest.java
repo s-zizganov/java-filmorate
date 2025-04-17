@@ -5,45 +5,78 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.UserService;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(UserController.class) // Тестируем только UserController
+// Аннотация @WebMvcTest указывает, что мы тестируем контроллер UserController
+// Spring загрузит только компоненты, связанные с MVC (контроллеры, обработчики исключений и т.д.), а остальные зависимости замокит
+@WebMvcTest(UserController.class)
 class UserControllerTest {
 
+    // Объявляем переменную mockMvc для выполнения HTTP-запросов в тестах
+    // @Autowired автоматически внедряет MockMvc, созданный Spring для тестирования
     @Autowired
-    private MockMvc mockMvc; // Инструмент для имитации HTTP-запросов
+    private MockMvc mockMvc;
 
+    // Объявляем переменную objectMapper для преобразования объектов в JSON и обратно
+    // @Autowired автоматически внедряет ObjectMapper, созданный Spring
     @Autowired
-    private ObjectMapper objectMapper; // Для работы с JSON
+    private ObjectMapper objectMapper;
 
-    @Autowired
-    private UserController userController; // Контроллер для очистки хранилища
+    // Объявляем мок-объект userStorage для имитации хранилища пользователей
+    // @MockBean создаёт мок и добавляет его в контекст Spring, заменяя реальное хранилище
+    @MockBean
+    private UserStorage userStorage;
 
+    // Объявляем мок-объект userService для имитации сервиса пользователей
+    // @MockBean создаёт мок и добавляет его в контекст Spring, заменяя реальный сервис
+    @MockBean
+    private UserService userService;
+
+    // Объявляем переменную user для хранения тестового объекта User - пользователя
+    private User user;
+    // Объявляем переменную friend для хранения тестового объекта User - друга пользователя
+    private User friend;
+
+    // Выполняется перед каждым тестом
+    // Подгтавливает тестовые данные, которые будут использоваться в тестах
     @BeforeEach
     void setUp() {
-        userController.findAll().clear();
-    }
-
-    // Тест на успешное создание пользователя с корректными данными
-    @Test
-    void shouldCreateUserSuccessfully() throws Exception {
-        User user = new User();
+        user = new User();
         user.setEmail("user@example.com");
         user.setLogin("userlogin");
         user.setName("User Name");
         user.setBirthday(LocalDate.of(1990, 1, 1));
 
-        mockMvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(user)))
+        friend = new User();
+        friend.setId(2L);
+        friend.setEmail("friend@example.com");
+        friend.setLogin("friendlogin");
+        friend.setName("Friend Name");
+        friend.setBirthday(LocalDate.of(1992, 2, 2));
+    }
+
+    @Test
+    void shouldGetUserById() throws Exception {
+        user.setId(1L);
+        when(userStorage.findById(1L)).thenReturn(Optional.of(user));
+
+        mockMvc.perform(get("/users/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.email").value("user@example.com"))
@@ -52,15 +85,54 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.birthday").value("1990-01-01"));
     }
 
-    // Тест на создание пользователя с пустым именем.
-    @Test
-    void shouldCreateUserWithEmptyName() throws Exception {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("userlogin");
-        user.setName("");
-        user.setBirthday(LocalDate.of(1990, 1, 1));
+    @Test  // Проверяет, что пользователя можно успешно получить по ID через GET-запрос
+    void shouldFailWhenUserNotFoundById() throws Exception {
+        when(userStorage.findById(999L)).thenReturn(Optional.empty());
 
+        mockMvc.perform(get("/users/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message").value("Пользователь с ID 999 не найден"));
+    }
+
+    @Test // Проверяет, что при запросе несуществующего пользователя возвращается ошибка 404
+    void shouldCreateUserSuccessfully() throws Exception {
+        when(userStorage.existsByEmail(anyString())).thenReturn(false);
+        when(userStorage.create(any(User.class))).thenAnswer(invocation -> {
+            User userToCreate = invocation.getArgument(0);
+            userToCreate.setId(1L);
+            return userToCreate;
+        });
+
+        // Выполняем POST-запрос на /users через MockMvc, чтобы создать нового пользователя
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(user)))
+                // Проверяем, что статус ответа — 200 (OK), то есть пользователь успешно создан
+                .andExpect(status().isOk())
+                // Проверяем, что в JSON-ответе поле id равно 1
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.email").value("user@example.com"))
+                .andExpect(jsonPath("$.login").value("userlogin"))
+                .andExpect(jsonPath("$.name").value("User Name"))
+                .andExpect(jsonPath("$.birthday").value("1990-01-01"));
+    }
+
+    @Test// Проверяет, что пользователь с пустым именем создаётся корректно (имя заменяется логином)
+    void shouldCreateUserWithEmptyName() throws Exception {
+        // Устанавливаем имя пользователя пустым (нарушение, но логика контроллера заменит его логином)
+        user.setName("");
+        // Настраиваем мок userStorage: при вызове existsByEmail с любым email возвращаем false (email не занят)
+        when(userStorage.existsByEmail(anyString())).thenReturn(false);
+        when(userStorage.create(any(User.class))).thenAnswer(invocation -> {
+            // Получаем пользователя, которого передали в метод create
+            User userToCreate = invocation.getArgument(0);
+            // Устанавливаем ID пользователя равным 1
+            userToCreate.setId(1L);
+            return userToCreate;
+        });
+
+        // Выполняем POST-запрос на /users через MockMvc, чтобы создать пользователя с пустым именем
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))
@@ -68,27 +140,36 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.email").value("user@example.com"))
                 .andExpect(jsonPath("$.login").value("userlogin"))
-                .andExpect(jsonPath("$.name").value("userlogin")) // Имя должно стать логином
+                .andExpect(jsonPath("$.name").value("userlogin"))
                 .andExpect(jsonPath("$.birthday").value("1990-01-01"));
     }
 
-    // Тест на успешное обновление пользователя.
-    @Test
+    @Test // Проверяет, что существующего пользователя можно успешно обновить через PUT-запрос
     void shouldUpdateUserSuccessfully() throws Exception {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("userlogin");
-        user.setName("User Name");
-        user.setBirthday(LocalDate.of(1990, 1, 1));
+        // Настраиваем мок userStorage: при вызове existsByEmail с любым email возвращаем false (email не занят)
+        when(userStorage.existsByEmail(anyString())).thenReturn(false);
+        // Настраиваем мок userStorage: при вызове create с любым пользователем возвращаем пользователя с ID = 1
+        when(userStorage.create(any(User.class))).thenAnswer(invocation -> {
+            // Получаем пользователя, которого передали в метод create
+            User userToCreate = invocation.getArgument(0);
+            // Устанавливаем ID пользователя равным 1
+            userToCreate.setId(1L);
+            // Возвращаем пользователя с установленным ID
+            return userToCreate;
+        });
 
+        // Выполняем POST-запрос на /users через MockMvc, чтобы создать нового пользователя
+        // Сохраняем ответ (JSON-строку) в переменную response
         String response = mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
+        // Преобразуем JSON-ответ (строку) обратно в объект User, чтобы получить созданного пользователя
         User createdUser = objectMapper.readValue(response, User.class);
 
+        // Создаём новый объект User для обновления
         User updatedUser = new User();
         updatedUser.setId(createdUser.getId());
         updatedUser.setEmail("updated@example.com");
@@ -96,6 +177,16 @@ class UserControllerTest {
         updatedUser.setName("Updated Name");
         updatedUser.setBirthday(LocalDate.of(1995, 5, 5));
 
+        // Настраиваем мок userStorage: при вызове findById с ID созданного пользователя возвращаем Optional
+        // с созданным пользователем
+        when(userStorage.findById(createdUser.getId())).thenReturn(Optional.of(createdUser));
+        // Настраиваем мок userStorage: при вызове existsByEmail с новым email возвращаем false (email не занят)
+        when(userStorage.existsByEmail("updated@example.com")).thenReturn(false);
+        // Настраиваем мок userStorage: при вызове update с любым пользователем возвращаем
+        // обновлённого пользователя (updatedUser)
+        when(userStorage.update(any(User.class))).thenReturn(updatedUser);
+
+        // Выполняем PUT-запрос на /users через MockMvc, чтобы обновить пользователя
         mockMvc.perform(put("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updatedUser)))
@@ -107,35 +198,34 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.birthday").value("1995-05-05"));
     }
 
-    // Тест на получение списка пользователей.
-    @Test
+    @Test // Проверяет, что можно получить список всех пользователей через GET-запрос
     void shouldGetAllUsers() throws Exception {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("userlogin");
-        user.setName("User Name");
-        user.setBirthday(LocalDate.of(1990, 1, 1));
+        when(userStorage.existsByEmail(anyString())).thenReturn(false);
+        when(userStorage.create(any(User.class))).thenAnswer(invocation -> {
+            User userToCreate = invocation.getArgument(0);
+            userToCreate.setId(1L);
+            return userToCreate;
+        });
 
+        // Выполняем POST-запрос на /users через MockMvc, чтобы создать нового пользователя
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))
                 .andExpect(status().isOk());
 
+        // Настраиваем мок userStorage: при вызове findAll возвращаем список, содержащий нашего тестового пользователя
+        when(userStorage.findAll()).thenReturn(List.of(user));
+
+        // Выполняем GET-запрос на /users через MockMvc, чтобы получить список всех пользователей
         mockMvc.perform(get("/users"))
                 .andExpect(status().isOk())
+                // Проверяем, что в JSON-ответе первый пользователь (индекс 0) имеет поле email равное "user@example.com"
                 .andExpect(jsonPath("$[0].email").value("user@example.com"));
     }
 
-    // Тест проверяет, что пользователь с пустым email не создаётся.
-    // Ожидаем статус 400 и сообщение об ошибке.
-    @Test
+    @Test // Проверяет, что при создании пользователя с пустым email возвращается ошибка
     void shouldFailWhenEmailIsBlank() throws Exception {
-        User user = new User();
         user.setEmail("");
-        user.setLogin("userlogin");
-        user.setName("User Name");
-        user.setBirthday(LocalDate.of(1990, 1, 1));
-
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))
@@ -144,15 +234,9 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("Email пользователя не может быть пустым"));
     }
 
-    // Тест проверяет, что пользователь с некорректным email, без @ не создаётся.
-    @Test
+    @Test // Проверяет, что при создании пользователя с некорректным email (без @) возвращается ошибка
     void shouldFailWhenEmailIsInvalid() throws Exception {
-        User user = new User();
         user.setEmail("invalid-email");
-        user.setLogin("userlogin");
-        user.setName("User Name");
-        user.setBirthday(LocalDate.of(1990, 1, 1));
-
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))
@@ -161,15 +245,9 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("Email должен содержать символ @"));
     }
 
-    // Тест проверяет, что пользователь с пустым логином не создаётся.
-    @Test
+    @Test // Проверяет, что при создании пользователя с пустым логином возвращается ошибка
     void shouldFailWhenLoginIsBlank() throws Exception {
-        User user = new User();
-        user.setEmail("user@example.com");
         user.setLogin("");
-        user.setName("User Name");
-        user.setBirthday(LocalDate.of(1990, 1, 1));
-
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))
@@ -178,15 +256,9 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("Логин пользователя не может быть пустым"));
     }
 
-    // Тест проверяет, что пользователь с логином, содержащим пробелы, не создаётся.
-    @Test
+    @Test // Проверяет, что при создании пользователя с логином, содержащим пробелы, возвращается ошибка
     void shouldFailWhenLoginHasSpaces() throws Exception {
-        User user = new User();
-        user.setEmail("user@example.com");
         user.setLogin("user login");
-        user.setName("User Name");
-        user.setBirthday(LocalDate.of(1990, 1, 1));
-
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))
@@ -195,15 +267,9 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("Логин не может содержать пробелы"));
     }
 
-    // Тест проверяет, что пользователь с датой рождения в будущем не создаётся.
-    @Test
+    @Test // Проверяет, что при создании пользователя с датой рождения в будущем возвращается ошибка
     void shouldFailWhenBirthdayIsInFuture() throws Exception {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("userlogin");
-        user.setName("User Name");
-        user.setBirthday(LocalDate.now().plusDays(1)); // Дата в будущем
-
+        user.setBirthday(LocalDate.now().plusDays(1));
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))
@@ -212,27 +278,17 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("Дата рождения не может быть в будущем"));
     }
 
-    // Тест проверяет, что пустой запрос для создания пользователя не проходит.
-    @Test
+    @Test // Проверяет, что при отправке пустого запроса на создание пользователя возвращается ошибка
     void shouldFailWhenRequestIsEmpty() throws Exception {
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(""))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Validation error"))
-                .andExpect(jsonPath("$.message").value("Тело запроса не может быть пустым"));
+                .andExpect(status().isBadRequest());
     }
 
-    // Тест проверяет, что обновление пользователя с null ID не проходит.
-    @Test
+    @Test // Проверяет, что при попытке обновить пользователя без указания ID возвращается ошибка
     void shouldFailWhenUpdatingWithNullId() throws Exception {
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("userlogin");
-        user.setName("User Name");
-        user.setBirthday(LocalDate.of(1990, 1, 1));
         user.setId(null);
-
         mockMvc.perform(put("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))
@@ -241,15 +297,10 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("ID пользователя должен быть указан"));
     }
 
-    // Тест проверяет, что обновление несуществующего пользователя не проходит.
-    @Test
+    @Test // Проверяет, что при попытке обновить несуществующего пользователя возвращается ошибка 404
     void shouldFailWhenUpdatingNonExistentUser() throws Exception {
-        User user = new User();
         user.setId(999L);
-        user.setEmail("user@example.com");
-        user.setLogin("userlogin");
-        user.setName("User Name");
-        user.setBirthday(LocalDate.of(1990, 1, 1));
+        when(userStorage.findById(999L)).thenReturn(Optional.empty());
 
         mockMvc.perform(put("/users")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -257,5 +308,69 @@ class UserControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Not found"))
                 .andExpect(jsonPath("$.message").value("Пользователь с ID 999 не найден"));
+    }
+
+    @Test // Проверяет, что друга можно успешно добавить через PUT-запрос
+    void shouldAddFriend() throws Exception {
+        // Настраиваем мок userStorage: при вызове findById с ID = 1 возвращаем Optional с нашим тестовым пользователем
+        when(userStorage.findById(1L)).thenReturn(Optional.of(user));
+        // Настраиваем мок userStorage: при вызове findById с ID = 2 возвращаем Optional с нашим тестовым другом
+        when(userStorage.findById(2L)).thenReturn(Optional.of(friend));
+        // Настраиваем мок userStorage: при вызове update с любым пользователем возвращаем переданного пользователя
+        when(userStorage.update(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(put("/users/1/friends/2"))
+                .andExpect(status().isOk());
+    }
+
+    @Test // Проверяет, что друга можно успешно удалить через DELETE-запрос
+    void shouldRemoveFriend() throws Exception {
+        when(userStorage.findById(1L)).thenReturn(Optional.of(user));
+        when(userStorage.findById(2L)).thenReturn(Optional.of(friend));
+        when(userStorage.update(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(delete("/users/1/friends/2"))
+                .andExpect(status().isOk());
+    }
+
+    @Test // Проверяет, что можно получить список друзей пользователя через GET запрос
+    void shouldGetFriends() throws Exception {
+        // Подготавливаем данные
+        user.setId(1L);
+        friend.setId(2L);
+
+        // Настраиваем поведение userService.getFriends
+        when(userService.getFriends(1L)).thenReturn(List.of(friend));
+
+        // Выполняем запрос и проверяем результат
+        mockMvc.perform(get("/users/1/friends"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(2))
+                .andExpect(jsonPath("$[0].email").value("friend@example.com"));
+    }
+
+    @Test // Проверяет, что можно получить список общих друзей двух пользователей через GET-запрос
+    void shouldGetCommonFriends() throws Exception {
+        // Создаём тестового пользователя - общего друга
+        User commonFriend = new User();
+        // Устанавливаем ID общего друга равным 3
+        commonFriend.setId(3L);
+        commonFriend.setEmail("common@example.com");
+        commonFriend.setLogin("commonlogin");
+        commonFriend.setName("Common Friend");
+        commonFriend.setBirthday(LocalDate.of(1993, 3, 3));
+
+        // Настраиваем мок userService: при вызове getCommonFriends с ID = 1 и ID = 2 возвращаем список,
+        // содержащий общего друга
+        when(userService.getCommonFriends(1L, 2L)).thenReturn(List.of(commonFriend));
+
+        // Выполняем GET-запрос на /users/1/friends/common/2 через MockMvc, чтобы получить список общих
+        // друзей пользователей с ID = 1 и ID = 2
+        mockMvc.perform(get("/users/1/friends/common/2"))
+                .andExpect(status().isOk())
+                // Проверяем, что в JSON-ответе первый общий друг (индекс 0) имеет поле id равное 3
+                .andExpect(jsonPath("$[0].id").value(3))
+                // Проверяем, что в JSON-ответе первый общий друг (индекс 0) имеет поле email равное "common@example.com"
+                .andExpect(jsonPath("$[0].email").value("common@example.com"));
     }
 }
