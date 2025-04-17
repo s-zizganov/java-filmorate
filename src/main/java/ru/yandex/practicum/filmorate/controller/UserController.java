@@ -15,14 +15,14 @@ import java.util.Collection;
 import java.util.List;
 
 @Slf4j
-@RequestMapping("/users")
+@RequestMapping(UserController.BASE_PATH)
 @RestController
 public class UserController {
 
     // Константа BASE_PATH задаёт базовый путь для всех методов контроллера
     public static final String BASE_PATH = "/users";
     // Константа FRIEND_PATH задаёт путь для операций с друзьями (добавление и удаление)
-    private static final String FRIEND_PATH = "/{id}/friends-{friendId}";
+    private static final String FRIEND_PATH = "/{id}/friends/{friendId}";
     // Константа COMMON_FRIENDS_PATH задаёт путь для получения общих друзей
     private static final String COMMON_FRIENDS_PATH = "/{id}/friends/common/{otherId}";
 

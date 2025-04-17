@@ -23,7 +23,7 @@ import java.util.List;
 public class FilmController {
     // Константа BASE_PATH задаёт базовый путь для всех методов контроллера
     public static final String BASE_PATH = "/films";
-    private static final String LIKE_PATH = "/{id}/like-{userId}";
+    private static final String LIKE_PATH = "/{id}/like/{userId}";
     // Объявляем переменную filmStorage для работы с хранилищем фильмов
     private final FilmStorage filmStorage;
     // Объявляем переменную filmService для работы с сервисом фильмов
