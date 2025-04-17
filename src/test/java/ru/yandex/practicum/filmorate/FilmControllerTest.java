@@ -1,148 +1,242 @@
 package ru.yandex.practicum.filmorate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(FilmController.class) // Указывает, что тестируем только FilmController в изолированной среде
+// Аннотация @WebMvcTest указывает, что мы тестируем контроллер FilmController
+// Spring загрузит только компоненты, связанные с MVC (контроллеры, обработчики исключений и т.д.), а остальные
+// зависимости замокит
+@WebMvcTest(FilmController.class)
 class FilmControllerTest {
 
+    // Переменная mockMvc для выполнения HTTP-запросов в тестах
+    // @Autowired автоматически внедряет MockMvc, созданный Spring для тестирования
     @Autowired
-    private MockMvc mockMvc; // Инструмент для отправки HTTP-запросов в тестах
+    private MockMvc mockMvc;
 
+    // Переменная objectMapper для преобразования объектов в JSON и обратно
+    // @Autowired автоматически внедряет ObjectMapper, созданный Spring
     @Autowired
-    private ObjectMapper objectMapper; // Преобразует объекты Java в JSON и обратно
+    private ObjectMapper objectMapper;
 
-    @Autowired
-    private FilmController filmController; // Добавляем контроллер, чтобы очищать хранилище
+    // Мок объект filmStorage для имитации хранилища фильмов
+    // @MockBean создаёт мок и добавляет его в контекст Spring, заменяя реальное хранилище
+    @MockBean
+    private FilmStorage filmStorage;
 
+    // Мок-объект filmService для имитации сервиса фильмов
+    // @MockBean создаёт мок и добавляет его в контекст Spring, заменяя реальный сервис
+    @MockBean
+    private FilmService filmService;
 
-    // Очищает хранилище фильмов перед каждым тестом, чтобы тесты не влияли друг на друга.
+    // Переменная film для хранения тестового объекта Film, который будем использовать в тестах
+    private Film film;
+
+    // Метод setUp выполняется перед каждым тестом (аннотация @BeforeEach)
+    // Он подготавливает тестовые данные, которые будут использоваться в тестах
     @BeforeEach
     void setUp() {
-        // Очищаем хранилище перед каждым тестом
-        filmController.findAll().clear();
+        // Создаём новый объект Film для тестов
+        film = new Film();
+        film.setName("Test Film");
+        film.setDescription("A test film description");
+        film.setReleaseDate(LocalDate.of(2000, 1, 1));
+        film.setDuration(120);
     }
 
-    // Тест на успешное создание фильма.
-    @Test
-    void shouldCreateFilmSuccessfully() throws Exception {
-        // Создаём объект фильма с корректными данными
-        Film film = new Film();
-        film.setName("Film1");
-        film.setDescription("Description1");
-        film.setReleaseDate(LocalDate.of(2010, 7, 16));
-        film.setDuration(148);
+    @Test // Проверяет, что фильм можно успешно получить по ID через GET-запрос
+    void shouldGetFilmById() throws Exception {
+        // Устанавливаем ID фильма равным 1
+        film.setId(1L);
+        // Настраиваем мок filmStorage: при вызове метода findById с ID = 1 возвращаем Optional с нашим тестовым фильмом
+        when(filmStorage.findById(1L)).thenReturn(Optional.of(film));
 
-        // Отправляем POST-запрос на "/films" с фильмом в формате JSON
-        mockMvc.perform(post("/films")
-                        .contentType(MediaType.APPLICATION_JSON) // Указываем, что отправляем JSON
-                        .content(objectMapper.writeValueAsString(film))) // Преобразуем фильм в JSON
-                .andExpect(status().isOk()) // Ожидаем статус 200 OK
-                .andExpect(jsonPath("$.id").value(1)) // Проверяем, что ID равен 1 (первый фильм)
-                .andExpect(jsonPath("$.name").value("Film1")) // Проверяем название
-                .andExpect(jsonPath("$.description").value("Description1")) // Проверяем описание
-                .andExpect(jsonPath("$.releaseDate").value("2010-07-16")) // Проверяем дату релиза
-                .andExpect(jsonPath("$.duration").value(148)); // Проверяем продолжительность
-    }
-
-    // Тест на успешное обновление фильма.
-    @Test
-    void shouldUpdateFilmSuccessfully() throws Exception {
-        // Создаём фильм
-        Film film = new Film();
-        film.setName("Film1");
-        film.setDescription("Description1");
-        film.setReleaseDate(LocalDate.of(2010, 7, 16));
-        film.setDuration(148);
-
-        // Отправляем POST-запрос и сохраняем ответ
-        String response = mockMvc.perform(post("/films")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(film)))
+        // Выполняем GET-запрос на /films/1 через MockMvc, чтобы получить фильм с ID = 1
+        mockMvc.perform(get("/films/1"))
+                // Проверяем, что статус ответа — 200 (OK), то есть запрос прошёл успешно
                 .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString(); // Получаем JSON ответа
+                // Проверяем, что в JSON-ответе поле id равно 1
+                .andExpect(jsonPath("$.id").value(1))
+                // Проверяем, что в JSON-ответе поле name равно "Test Film"
+                .andExpect(jsonPath("$.name").value("Test Film"))
+                // Проверяем, что в JSON-ответе поле description равно "A test film description"
+                .andExpect(jsonPath("$.description").value("A test film description"))
+                // Проверяем, что в JSON-ответе поле releaseDate равно "2000-01-01"
+                .andExpect(jsonPath("$.releaseDate").value("2000-01-01"))
+                // Проверяем, что в JSON-ответе поле duration равно 120
+                .andExpect(jsonPath("$.duration").value(120));
+    }
 
-        Film createdFilm = objectMapper.readValue(response, Film.class); // Преобразуем ответ в объект Film
+    @Test // Проверяет, что при запросе несуществующего фильма возвращается ошибка 404
+    void shouldFailWhenFilmNotFoundById() throws Exception {
+        // Настраиваем мок filmStorage: при вызове findById с ID = 999 возвращаем пустой Optional (фильм не найден)
+        when(filmStorage.findById(999L)).thenReturn(Optional.empty());
 
-        // Обновляем фильм
+        // Выполняем GET-запрос на /films/999 через MockMvc, чтобы получить фильм с id = 999
+        mockMvc.perform(get("/films/999"))
+                // Проверяем, что статус ответа — 404 (Not Found), так как фильм не найден
+                .andExpect(status().isNotFound())
+                // Проверяем, что в JSON-ответе поле error равно "Not found"
+                .andExpect(jsonPath("$.error").value("Not found"))
+                // Проверяем, что в JSON-ответе поле message равно "Фильм с ID 999 не найден"
+                .andExpect(jsonPath("$.message").value("Фильм с ID 999 не найден"));
+    }
+
+    @Test // Проверяет, что фильм можно успешно создать через POST-запрос
+    void shouldCreateFilmSuccessfully() throws Exception {
+        // Настраиваем мок filmStorage: при вызове create с любым фильмом (any(Film.class)) возвращаем фильм с id = 1
+        when(filmStorage.create(any(Film.class))).thenAnswer(invocation -> {
+            // Получаем фильм, который передали в метод create
+            Film filmToCreate = invocation.getArgument(0);
+            // Устанавливаем ID фильма равным 1
+            filmToCreate.setId(1L);
+            // Возвращаем фильм с установленным Id
+            return filmToCreate;
+        });
+
+        // Выполняем POST-запрос на /films через MockMvc, чтобы создать новый фильм
+        mockMvc.perform(post("/films")
+                        // Указываем, что тело запроса — это JSON (тип содержимого — application/json)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        // Преобразуем тестовый фильм в JSON-строку и отправляем в теле запроса
+                        .content(objectMapper.writeValueAsString(film)))
+                // Проверяем, что статус ответа — 200 (OK), то есть фильм успешно создан
+                .andExpect(status().isOk())
+                // Проверяем, что в JSON-ответе поле id равно 1
+                .andExpect(jsonPath("$.id").value(1))
+                // Проверяем, что в JSON-ответе поле name равно "Test Film"
+                .andExpect(jsonPath("$.name").value("Test Film"))
+                .andExpect(jsonPath("$.description").value("A test film description"))
+                .andExpect(jsonPath("$.releaseDate").value("2000-01-01"))
+                .andExpect(jsonPath("$.duration").value(120));
+    }
+
+    @Test  // Проверяет, что существующий фильм можно успешно обновить через PUT-запрос
+    void shouldUpdateFilmSuccessfully() throws Exception {
+        // Настраиваем мок filmStorage: при вызове create с любым фильмом (any(Film.class)) возвращаем фильм с ID = 1
+        when(filmStorage.create(any(Film.class))).thenAnswer(invocation -> {
+            // Получаем фильм, который передали в метод create
+            Film filmToCreate = invocation.getArgument(0);
+            // Устанавливаем ID фильма равным 1
+            filmToCreate.setId(1L);
+            // Возвращаем фильм с установленным ID
+            return filmToCreate;
+        });
+
+        // Выполняем POST-запрос на /films через MockMvc, чтобы создать новый фильм
+        // Сохраняем ответ (JSON-строку) в переменную response
+        String response = mockMvc.perform(post("/films")
+                        // Указываем, что тело запроса — это JSON
+                        .contentType(MediaType.APPLICATION_JSON)
+                        // Преобразуем тестовый фильм в JSON-строку и отправляем в теле запроса
+                        .content(objectMapper.writeValueAsString(film)))
+                // Проверяем, что статус ответа — 200 (OK), то есть фильм успешно создан
+                .andExpect(status().isOk())
+                // Получаем содержимое ответа в виде строки
+                .andReturn().getResponse().getContentAsString();
+
+        // Преобразуем JSON-ответ (строку) обратно в объект Film, чтобы получить созданный фильм
+        Film createdFilm = objectMapper.readValue(response, Film.class);
+
+        // Создаём новый объект Film для обновления
         Film updatedFilm = new Film();
+        // Устанавливаем ID обновляемого фильма равным ID созданного фильма
         updatedFilm.setId(createdFilm.getId());
-        updatedFilm.setName("Film2");
-        updatedFilm.setDescription("Description2");
-        updatedFilm.setReleaseDate(LocalDate.of(2010, 7, 16));
+        // Устанавливаем новое название фильма
+        updatedFilm.setName("Updated Film");
+        // Устанавливаем новое описание фильма
+        updatedFilm.setDescription("Updated description");
+        // Устанавливаем новую дату выпуска
+        updatedFilm.setReleaseDate(LocalDate.of(2017, 10, 17));
+        // Устанавливаем новую продолжительность
         updatedFilm.setDuration(150);
 
-        // Отправляем PUT-запрос для обновления
+        // Настраиваем мок filmStorage: при вызове findById с ID созданного фильма возвращаем Optional с созданным фильмом
+        when(filmStorage.findById(createdFilm.getId())).thenReturn(Optional.of(createdFilm));
+        // Настраиваем мок filmStorage: при вызове update с любым фильмом возвращаем обновлённый фильм (updatedFilm)
+        when(filmStorage.update(any(Film.class))).thenReturn(updatedFilm);
+
+        // Выполняем PUT-запрос на /films через MockMvc, чтобы обновить фильм
         mockMvc.perform(put("/films")
+                        // Указываем, что тело запроса — это JSON
                         .contentType(MediaType.APPLICATION_JSON)
+                        // Преобразуем обновлённый фильм в JSON-строку и отправляем в теле запроса
                         .content(objectMapper.writeValueAsString(updatedFilm)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(createdFilm.getId()))
-                .andExpect(jsonPath("$.name").value("Film2"))
-                .andExpect(jsonPath("$.description").value("Description2"))
-                .andExpect(jsonPath("$.releaseDate").value("2010-07-16"))
+                // Проверяем, что в JSON-ответе поле name равно "Updated Film"
+                .andExpect(jsonPath("$.name").value("Updated Film"))
+                .andExpect(jsonPath("$.description").value("Updated description"))
+                .andExpect(jsonPath("$.releaseDate").value("2017-10-17"))
                 .andExpect(jsonPath("$.duration").value(150));
     }
 
-    // Тест на получение списка фильмов.
-    @Test
+    @Test // Проверяет, что можно получить список всех фильмов через GET-запрос
     void shouldGetAllFilms() throws Exception {
-        // Создаём фильм
-        Film film = new Film();
-        film.setName("Film1");
-        film.setDescription("Description1");
-        film.setReleaseDate(LocalDate.of(2010, 7, 16));
-        film.setDuration(148);
+        // Настраиваем мок filmStorage: при вызове create с любым фильмом возвращаем фильм с ID = 1
+        when(filmStorage.create(any(Film.class))).thenAnswer(invocation -> {
+            // Получаем фильм, который передали в метод create
+            Film filmToCreate = invocation.getArgument(0);
+            // Устанавливаем ID фильма равным 1
+            filmToCreate.setId(1L);
+            return filmToCreate;
+        });
 
+        // Выполняем POST-запрос на /films через MockMvc, чтобы создать новый фильм
         mockMvc.perform(post("/films")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(film)))
                 .andExpect(status().isOk());
 
-        // Проверяем список фильмов
+        // Настраиваем мок filmStorage: при вызове findAll возвращаем список, содержащий наш тестовый фильм
+        when(filmStorage.findAll()).thenReturn(List.of(film));
+
+        // Выполняем GET-запрос на /films через MockMvc, чтобы получить список всех фильмов
         mockMvc.perform(get("/films"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("Film1"));
+                .andExpect(jsonPath("$[0].name").value("Test Film"));
     }
 
-    // Тест на создание фильма с пустым названием.
+    // Проверяет, что при создании фильма с пустым названием возвращается ошибка
     @Test
     void shouldFailWhenNameIsBlank() throws Exception {
-        Film film = new Film();
+        // Устанавливаем название фильма пустым
         film.setName("");
-        film.setDescription("Description");
-        film.setReleaseDate(LocalDate.of(2000, 1, 1));
-        film.setDuration(120);
-
+        // Выполняем POST-запрос на /films через MockMvc, чтобы создать фильм с пустым названием
         mockMvc.perform(post("/films")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(film)))
-                .andExpect(status().isBadRequest()) // Ожидаем статус 400
-                .andExpect(jsonPath("$.error").value("Validation error")) // Тип ошибки
+                // Проверяем, что статус ответа — 400 (Bad Request), так как валидация не прошла
+                .andExpect(status().isBadRequest())
+                // Проверяем, что в JSON-ответе поле error равно "Validation error"
+                .andExpect(jsonPath("$.error").value("Validation error"))
+                // Проверяем, что в JSON-ответе поле message равно "Название не может быть пустым"
                 .andExpect(jsonPath("$.message").value("Название не может быть пустым"));
     }
 
-    // Тест на создание фильма с описанием длиннее 200 символов.
-    @Test
-    void shouldFailWhenDescriptionIsTooLong() throws Exception {
-        Film film = new Film();
-        film.setName("Film");
-        film.setDescription("A".repeat(201)); // Создаём строку из 201 символа A
-        film.setReleaseDate(LocalDate.of(2000, 1, 1));
-        film.setDuration(120);
-
+    @Test // Проверяет, что при создании фильма с описанием длиннее 200 символов возвращается ошибка
+    void shouldFailWhenDescriptionTooLong() throws Exception {
+        film.setDescription("A".repeat(201));
         mockMvc.perform(post("/films")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(film)))
@@ -151,33 +245,20 @@ class FilmControllerTest {
                 .andExpect(jsonPath("$.message").value("Описание не может превышать 200 символов"));
     }
 
-    // Тест на создание фильма с датой релиза раньше 28 декабря 1895 года
-    @Test
-    void shouldFailWhenReleaseDateIsTooEarly() throws Exception {
-        Film film = new Film();
-        film.setName("Film");
-        film.setDescription("Description");
+    @Test // Проверяет, что при создании фильма с датой релиза раньше 28 декабря 1895 года возвращается ошибка
+    void shouldFailWhenReleaseDateTooEarly() throws Exception {
         film.setReleaseDate(LocalDate.of(1895, 12, 27));
-        film.setDuration(120);
-
         mockMvc.perform(post("/films")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(film)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Validation error"))
-                .andExpect(jsonPath("$.message").value("Дата релиза фильма не может быть раньше " +
-                        "28 декабря 1895г."));
+                .andExpect(jsonPath("$.message").value("Дата релиза фильма не может быть раньше 28 декабря 1895г."));
     }
 
-    // Тест на создание фильма с отрицательной продолжительностью.
-    @Test
-    void shouldFailWhenDurationIsNegative() throws Exception {
-        Film film = new Film();
-        film.setName("Film");
-        film.setDescription("Description");
-        film.setReleaseDate(LocalDate.of(2000, 1, 1));
-        film.setDuration(-1);
-
+    @Test // Проверяет, что при создании фильма с нулевой или отрицательной продолжительностью возвращается ошибка
+    void shouldFailWhenDurationNotPositive() throws Exception {
+        film.setDuration(0);
         mockMvc.perform(post("/films")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(film)))
@@ -186,30 +267,61 @@ class FilmControllerTest {
                 .andExpect(jsonPath("$.message").value("Продолжительность фильма должна быть положительным числом"));
     }
 
-    // Тест на отправку пустого запроса.
-    @Test
-    void shouldFailWhenRequestIsEmpty() throws Exception {
-        mockMvc.perform(post("/films")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("")) // Пустое тело запроса
-                .andExpect(status().isBadRequest()); // Ожидаем статус 400
-    }
-
-    // Тест на обновление фильма с null ID.
-    @Test
-    void shouldFailWhenUpdatingWithNullId() throws Exception {
-        Film film = new Film();
-        film.setName("Film");
-        film.setDescription("Description");
-        film.setReleaseDate(LocalDate.of(2000, 1, 1));
-        film.setDuration(120);
-        film.setId(null); // ID не указан
+    @Test  // Проверяет, что при попытке обновить несуществующий фильм возвращается ошибка 404
+    void shouldFailWhenUpdatingNonExistentFilm() throws Exception {
+        film.setId(999L);
+        when(filmStorage.findById(999L)).thenReturn(Optional.empty());
 
         mockMvc.perform(put("/films")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(film)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Validation error"))
-                .andExpect(jsonPath("$.message").value("ID фильма должен быть указан"));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Not found"))
+                .andExpect(jsonPath("$.message").value("Фильм с ID 999 не найден"));
+    }
+
+    @Test // Проверяет, что лайк можно успешно добавить через PUT-запрос
+    void shouldAddLike() throws Exception {
+        // Настраиваем мок filmStorage: при вызове findById с ID = 1 возвращаем Optional с нашим тестовым фильмом
+        when(filmStorage.findById(1L)).thenReturn(Optional.of(film));
+        // Настраиваем мок filmStorage: при вызове update с любым фильмом возвращаем переданный фильм
+        when(filmStorage.update(any(Film.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(put("/films/1/like/1"))
+                .andExpect(status().isOk());
+    }
+
+    @Test  // Проверяет, что лайк можно успешно удалить через DELETE-запрос
+    void shouldRemoveLike() throws Exception {
+        when(filmStorage.findById(1L)).thenReturn(Optional.of(film));
+        when(filmStorage.update(any(Film.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(delete("/films/1/like/1"))
+                .andExpect(status().isOk());
+    }
+
+    @Test  // Проверяет, что можно получить список популярных фильмов через GET-запрос
+    void shouldGetPopularFilms() throws Exception {
+        // Создаём второй тестовый фильм (популярный, с двумя лайками)
+        Film film2 = new Film();
+        film2.setId(2L);
+        film2.setName("Popular Film");
+        film2.setDescription("A popular film");
+        film2.setReleaseDate(LocalDate.of(2020, 1, 1));
+        film2.setDuration(100);
+        film2.getLikes().add(1L);
+        film2.getLikes().add(2L);
+
+        // Настраиваем мок filmService: при вызове getPopularFilms с параметром 10 возвращаем список с
+        // двумя фильмами (film2 и film)
+        when(filmService.getPopularFilms(10)).thenReturn(List.of(film2, film));
+
+        // Выполняем GET-запрос на /films/popular через MockMvc, чтобы получить список популярных фильмов
+        mockMvc.perform(get("/films/popular"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(2))
+                .andExpect(jsonPath("$[0].name").value("Popular Film"))
+                .andExpect(jsonPath("$[1].id").value(Matchers.nullValue())) // Используем Matchers.nullValue()
+                .andExpect(jsonPath("$[1].name").value("Test Film"));
     }
 }

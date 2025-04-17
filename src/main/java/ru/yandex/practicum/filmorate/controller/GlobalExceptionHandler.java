@@ -5,6 +5,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import ru.yandex.practicum.filmorate.exception.DuplicatedDataException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 
@@ -55,5 +56,12 @@ public class GlobalExceptionHandler {
                 "error", "Validation error",
                 "message", "Тело запроса не может быть пустым"
         );
+    }
+
+    // Метод handleDuplicatedDataException для обработки исключений, связанных с дублированием данных
+    @ExceptionHandler(DuplicatedDataException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST) // Статус ответа 400
+    public Map<String, String> handleDuplicatedDataException(DuplicatedDataException ex) {
+        return Map.of("error", "Duplicated data", "message", ex.getMessage());
     }
 }
