@@ -19,6 +19,13 @@ import java.util.List;
 @RestController
 public class UserController {
 
+    // Константа BASE_PATH задаёт базовый путь для всех методов контроллера
+    public static final String BASE_PATH = "/users";
+    // Константа FRIEND_PATH задаёт путь для операций с друзьями (добавление и удаление)
+    private static final String FRIEND_PATH = "/{id}/friends-{friendId}";
+    // Константа COMMON_FRIENDS_PATH задаёт путь для получения общих друзей
+    private static final String COMMON_FRIENDS_PATH = "/{id}/friends/common/{otherId}";
+
     private final UserStorage userStorage;
     private final UserService userService;
 
@@ -161,7 +168,7 @@ public class UserController {
     }
 
     // Метод addFriend для добавления друга, обрабатывает PUT-запрос на /users/id/friends/friendId
-    @PutMapping("/{id}/friends/{friendId}")
+    @PutMapping(FRIEND_PATH)
     public void addFriend(@PathVariable("id") Long userId, @PathVariable Long friendId) {
         log.info("Получен запрос на добавление друга: userId={}, friendId={}", userId, friendId);
         userService.addFriend(userId, friendId);
@@ -169,7 +176,7 @@ public class UserController {
     }
 
     // Метод removeFriend для удаления друга обрабатывает DELETE-запрос на /users/id/frends/friendId
-    @DeleteMapping("/{id}/friends/{friendId}")
+    @DeleteMapping(FRIEND_PATH)
     public void removeFriend(@PathVariable("id") Long userId, @PathVariable Long friendId) {
         log.info("Получен запрос на удаление друга: userId={}, friendId={}", userId, friendId);
         userService.removeFriend(userId, friendId);
@@ -187,7 +194,7 @@ public class UserController {
     }
 
     // Метод getCommonFriends для получения списка общих друзей двух пользователей
-    @GetMapping("/{id}/friends/common/{otherId}")
+    @GetMapping(COMMON_FRIENDS_PATH)
     public List<User> getCommonFriends(@PathVariable("id") Long userId, @PathVariable Long otherId) {
         log.info("Получен запрос на получение общих друзей: userId={}, otherId={}", userId, otherId);
         List<User> commonFriends = userService.getCommonFriends(userId, otherId);

@@ -19,8 +19,11 @@ import java.util.List;
 @RestController
 // Аннотация @RequestMapping /films указывает, что все запросы, начинающиеся с /films, будут обрабатываться этим
 // контроллером
-@RequestMapping("/films")
+@RequestMapping(FilmController.BASE_PATH)
 public class FilmController {
+    // Константа BASE_PATH задаёт базовый путь для всех методов контроллера
+    public static final String BASE_PATH = "/films";
+    private static final String LIKE_PATH = "/{id}/like-{userId}";
     // Объявляем переменную filmStorage для работы с хранилищем фильмов
     private final FilmStorage filmStorage;
     // Объявляем переменную filmService для работы с сервисом фильмов
@@ -125,7 +128,7 @@ public class FilmController {
     }
 
     // Метод addLike для добавления лайка фильму, обрабатывает PUT-запрос на /films/id/like/userId
-    @PutMapping("/{id}/like/{userId}")
+    @PutMapping(LIKE_PATH)
     public void addLike(@PathVariable("id") Long filmId, @PathVariable Long userId) {
         log.info("Получен запрос на добавление лайка: filmId={}, userId={}", filmId, userId);
         // Вызываем метод addLike в FilmService, чтобы добавить лайк фильму от пользователя
@@ -134,7 +137,7 @@ public class FilmController {
     }
 
     // Метод removeLike для удаления лайка с фильма (обрабатывает DELETE-запрос на /films/id/like/userId
-    @DeleteMapping("/{id}/like/{userId}")
+    @DeleteMapping(LIKE_PATH)
     public void removeLike(@PathVariable("id") Long filmId, @PathVariable Long userId) {
         log.info("Получен запрос на удаление лайка: filmId={}, userId={}", filmId, userId);
         // Вызываем метод removeLike в FilmService чтобы удалить лайк

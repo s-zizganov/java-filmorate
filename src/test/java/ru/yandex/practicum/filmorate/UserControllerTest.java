@@ -319,7 +319,7 @@ class UserControllerTest {
         // Настраиваем мок userStorage: при вызове update с любым пользователем возвращаем переданного пользователя
         when(userStorage.update(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        mockMvc.perform(put("/users/1/friends/2"))
+        mockMvc.perform(put("/users/1/friends-2"))
                 .andExpect(status().isOk());
     }
 
@@ -329,7 +329,7 @@ class UserControllerTest {
         when(userStorage.findById(2L)).thenReturn(Optional.of(friend));
         when(userStorage.update(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        mockMvc.perform(delete("/users/1/friends/2"))
+        mockMvc.perform(delete("/users/1/friends-2"))
                 .andExpect(status().isOk());
     }
 

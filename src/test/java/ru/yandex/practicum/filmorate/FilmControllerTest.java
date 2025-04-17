@@ -287,7 +287,7 @@ class FilmControllerTest {
         // Настраиваем мок filmStorage: при вызове update с любым фильмом возвращаем переданный фильм
         when(filmStorage.update(any(Film.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        mockMvc.perform(put("/films/1/like/1"))
+        mockMvc.perform(put("/films/1/like-1"))
                 .andExpect(status().isOk());
     }
 
@@ -296,7 +296,7 @@ class FilmControllerTest {
         when(filmStorage.findById(1L)).thenReturn(Optional.of(film));
         when(filmStorage.update(any(Film.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        mockMvc.perform(delete("/films/1/like/1"))
+        mockMvc.perform(delete("/films/1/like-1"))
                 .andExpect(status().isOk());
     }
 
