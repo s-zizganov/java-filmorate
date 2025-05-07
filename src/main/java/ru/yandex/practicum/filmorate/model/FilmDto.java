@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.model;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -18,9 +19,9 @@ public class FilmDto {
     private LocalDate releaseDate;
     private int duration;
     // Множество идентификаторов пользователей, поставивших лайк фильму
-    private Set<Long> likes;
-    // Список идентификаторов жанров фильма
-    private List<Integer> genres; // Список ID жанров
-    // Идентификатор рейтинга MPA
-    private String mpa; // ID рейтинга MPA
+    private Set<Long> likes = new HashSet<>();
+    // Список объектов жанров
+    private List<GenreDto> genres;
+    // Объект рейтинга MPA
+    private MpaRatingDto mpa;
 }

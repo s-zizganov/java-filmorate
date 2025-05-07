@@ -9,7 +9,7 @@ import lombok.Data;
 @Data
 public class MpaRatingDto {
     // Идентификатор рейтинга MPA
-    private String id;
+    private Integer id;
     // Название рейтинга MPA
     private String name;
 }

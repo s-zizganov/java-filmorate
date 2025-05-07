@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.FilmDto;
+import ru.yandex.practicum.filmorate.model.GenreDto;
 import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
@@ -57,6 +58,20 @@ public class FilmController {
         if (film.getDuration() <= 0) {
             log.error("Ошибка валидации: Продолжительность фильма должна быть положительным числом");
             throw new ValidationException("Продолжительность фильма должна быть положительным числом");
+        }
+        // Проверка, что MPA рейтинг указан
+        if (film.getMpa() == null || film.getMpa().getId() == null) {
+            log.error("Ошибка валидации: MPA рейтинг должен быть указан");
+            throw new ValidationException("MPA рейтинг должен быть указан");
+        }
+        // Проверка, что жанры корректны (если указаны)
+        if (film.getGenres() != null) {
+            for (GenreDto genre : film.getGenres()) {
+                if (genre.getId() == null) {
+                    log.error("Ошибка валидации: ID жанра должен быть указан");
+                    throw new ValidationException("ID жанра должен быть указан");
+                }
+            }
         }
         log.debug("Валидация фильма успешно завершена");
     }

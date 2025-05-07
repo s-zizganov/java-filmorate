@@ -11,11 +11,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.model.FilmDto;
+import ru.yandex.practicum.filmorate.model.GenreDto;
+import ru.yandex.practicum.filmorate.model.MpaRatingDto;
 import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -67,6 +70,18 @@ class FilmControllerTest {
         film.setDescription("A test film description");
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
         film.setDuration(120);
+
+        // Добавляем обязательный MPA-рейтинг
+        MpaRatingDto mpa = new MpaRatingDto();
+        mpa.setId(3); // Соответствует "PG-13" (как в FilmoRateIntegrationTests)
+        mpa.setName("PG-13");
+        film.setMpa(mpa);
+
+        // Добавляем жанры
+        GenreDto genre = new GenreDto();
+        genre.setId(1); // Соответствует "Комедия" (как в FilmoRateIntegrationTests)
+        genre.setName("Комедия");
+        film.setGenres(Collections.singletonList(genre));
     }
 
     @Test // Проверяет, что фильм можно успешно получить по ID через GET-запрос
@@ -89,7 +104,13 @@ class FilmControllerTest {
                 // Проверяем, что в JSON-ответе поле releaseDate равно "2000-01-01"
                 .andExpect(jsonPath("$.releaseDate").value("2000-01-01"))
                 // Проверяем, что в JSON-ответе поле duration равно 120
-                .andExpect(jsonPath("$.duration").value(120));
+                .andExpect(jsonPath("$.duration").value(120))
+                // Проверяем, что MPA-рейтинг возвращается корректно
+                .andExpect(jsonPath("$.mpa.id").value(3))
+                .andExpect(jsonPath("$.mpa.name").value("PG-13"))
+                // Проверяем, что жанры возвращаются корректно
+                .andExpect(jsonPath("$.genres[0].id").value(1))
+                .andExpect(jsonPath("$.genres[0].name").value("Комедия"));
     }
 
     @Test // Проверяет, что при запросе несуществующего фильма возвращается ошибка 404
@@ -133,7 +154,13 @@ class FilmControllerTest {
                 .andExpect(jsonPath("$.name").value("Test Film"))
                 .andExpect(jsonPath("$.description").value("A test film description"))
                 .andExpect(jsonPath("$.releaseDate").value("2000-01-01"))
-                .andExpect(jsonPath("$.duration").value(120));
+                .andExpect(jsonPath("$.duration").value(120))
+                // Проверяем, что MPA-рейтинг возвращается корректно
+                .andExpect(jsonPath("$.mpa.id").value(3))
+                .andExpect(jsonPath("$.mpa.name").value("PG-13"))
+                // Проверяем, что жанры возвращаются корректно
+                .andExpect(jsonPath("$.genres[0].id").value(1))
+                .andExpect(jsonPath("$.genres[0].name").value("Комедия"));
     }
 
     @Test  // Проверяет, что существующий фильм можно успешно обновить через PUT-запрос
@@ -175,6 +202,16 @@ class FilmControllerTest {
         updatedFilm.setReleaseDate(LocalDate.of(2017, 10, 17));
         // Устанавливаем новую продолжительность
         updatedFilm.setDuration(150);
+        // Устанавливаем MPA-рейтинг
+        MpaRatingDto updatedMpa = new MpaRatingDto();
+        updatedMpa.setId(4); // Соответствует "R"
+        updatedMpa.setName("R");
+        updatedFilm.setMpa(updatedMpa);
+        // Устанавливаем жанры
+        GenreDto updatedGenre = new GenreDto();
+        updatedGenre.setId(2); // Соответствует "Драма"
+        updatedGenre.setName("Драма");
+        updatedFilm.setGenres(Collections.singletonList(updatedGenre));
 
         // Настраиваем мок filmStorage: при вызове findById с ID созданного фильма возвращаем Optional с созданным фильмом
         when(filmStorage.findById(createdFilm.getId())).thenReturn(Optional.of(createdFilm));
@@ -193,7 +230,13 @@ class FilmControllerTest {
                 .andExpect(jsonPath("$.name").value("Updated Film"))
                 .andExpect(jsonPath("$.description").value("Updated description"))
                 .andExpect(jsonPath("$.releaseDate").value("2017-10-17"))
-                .andExpect(jsonPath("$.duration").value(150));
+                .andExpect(jsonPath("$.duration").value(150))
+                // Проверяем, что MPA-рейтинг обновлён
+                .andExpect(jsonPath("$.mpa.id").value(4))
+                .andExpect(jsonPath("$.mpa.name").value("R"))
+                // Проверяем, что жанры обновлены
+                .andExpect(jsonPath("$.genres[0].id").value(2))
+                .andExpect(jsonPath("$.genres[0].name").value("Драма"));
     }
 
     @Test // Проверяет, что можно получить список всех фильмов через GET-запрос
@@ -219,7 +262,13 @@ class FilmControllerTest {
         // Выполняем GET-запрос на /films через MockMvc, чтобы получить список всех фильмов
         mockMvc.perform(get("/films"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("Test Film"));
+                .andExpect(jsonPath("$[0].name").value("Test Film"))
+                // Проверяем, что MPA-рейтинг возвращается корректно
+                .andExpect(jsonPath("$[0].mpa.id").value(3))
+                .andExpect(jsonPath("$[0].mpa.name").value("PG-13"))
+                // Проверяем, что жанры возвращаются корректно
+                .andExpect(jsonPath("$[0].genres[0].id").value(1))
+                .andExpect(jsonPath("$[0].genres[0].name").value("Комедия"));
     }
 
     // Проверяет, что при создании фильма с пустым названием возвращается ошибка
@@ -315,6 +364,16 @@ class FilmControllerTest {
         film2.setReleaseDate(LocalDate.of(2020, 1, 1));
         film2.setDuration(100);
         film2.setLikes(Set.of(1L, 2L));
+        // Устанавливаем MPA-рейтинг для film2
+        MpaRatingDto mpa2 = new MpaRatingDto();
+        mpa2.setId(4); // Соответствует "R"
+        mpa2.setName("R");
+        film2.setMpa(mpa2);
+        // Устанавливаем жанры для film2
+        GenreDto genre2 = new GenreDto();
+        genre2.setId(2); // Соответствует "Драма"
+        genre2.setName("Драма");
+        film2.setGenres(Collections.singletonList(genre2));
 
         // Настраиваем мок filmService: при вызове getPopularFilms с параметром 10 возвращаем список с
         // двумя фильмами (film2 и film)
@@ -326,6 +385,16 @@ class FilmControllerTest {
                 .andExpect(jsonPath("$[0].id").value(2))
                 .andExpect(jsonPath("$[0].name").value("Popular Film"))
                 .andExpect(jsonPath("$[1].id").value(Matchers.nullValue())) // Используем Matchers.nullValue()
-                .andExpect(jsonPath("$[1].name").value("Test Film"));
+                .andExpect(jsonPath("$[1].name").value("Test Film"))
+                // Проверяем, что MPA-рейтинг возвращается корректно
+                .andExpect(jsonPath("$[0].mpa.id").value(4))
+                .andExpect(jsonPath("$[0].mpa.name").value("R"))
+                .andExpect(jsonPath("$[1].mpa.id").value(3))
+                .andExpect(jsonPath("$[1].mpa.name").value("PG-13"))
+                // Проверяем, что жанры возвращаются корректно
+                .andExpect(jsonPath("$[0].genres[0].id").value(2))
+                .andExpect(jsonPath("$[0].genres[0].name").value("Драма"))
+                .andExpect(jsonPath("$[1].genres[0].id").value(1))
+                .andExpect(jsonPath("$[1].genres[0].name").value("Комедия"));
     }
 }

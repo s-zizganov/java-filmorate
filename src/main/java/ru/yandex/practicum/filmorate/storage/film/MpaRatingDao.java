@@ -30,7 +30,7 @@ public class MpaRatingDao {
      */
     public List<MpaRating> findAll() {
         log.debug("Получение списка всех рейтингов MPA");
-        String sql = "SELECT mpa_rating FROM mpa_ratings ORDER BY mpa_rating";
+        String sql = "SELECT mpa_id, mpa_rating FROM mpa_ratings ORDER BY mpa_id";
         List<MpaRating> ratings = jdbcTemplate.query(sql, this::mapRowToMpaRating);
         log.info("Найдено {} рейтингов MPA", ratings.size());
         return ratings;
@@ -42,9 +42,9 @@ public class MpaRatingDao {
      * @return найденный рейтинг MPA
      * @throws NotFoundException если рейтинг не найден
      */
-    public MpaRating findById(String id) {
+    public MpaRating findById(Integer id) {
         log.debug("Поиск рейтинга MPA с ID {}", id);
-        String sql = "SELECT mpa_rating FROM mpa_ratings WHERE mpa_rating = ?";
+        String sql = "SELECT mpa_id, mpa_rating FROM mpa_ratings WHERE mpa_id = ?";
         List<MpaRating> ratings = jdbcTemplate.query(sql, this::mapRowToMpaRating, id);
         if (ratings.isEmpty()) {
             throw new NotFoundException("Рейтинг MPA с ID " + id + " не найден");
@@ -58,6 +58,6 @@ public class MpaRatingDao {
      */
     private MpaRating mapRowToMpaRating(ResultSet rs, int rowNum) throws SQLException {
         String rating = rs.getString("mpa_rating");
-        return MpaRating.valueOf(rating);
+        return MpaRating.valueOf(rating.replace("-", "_"));
     }
 }

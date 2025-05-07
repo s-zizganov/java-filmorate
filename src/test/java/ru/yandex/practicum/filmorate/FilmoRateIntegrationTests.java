@@ -11,6 +11,8 @@ import org.springframework.test.context.ContextConfiguration;
 import ru.yandex.practicum.filmorate.storage.film.FilmDbStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserDbStorage;
 import ru.yandex.practicum.filmorate.model.FilmDto;
+import ru.yandex.practicum.filmorate.model.GenreDto;
+import ru.yandex.practicum.filmorate.model.MpaRatingDto;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.time.LocalDate;
@@ -56,15 +58,20 @@ class FilmoRateIntegrationTests {
         jdbcTemplate.execute("ALTER TABLE users ALTER COLUMN user_id RESTART WITH 1");
         jdbcTemplate.execute("ALTER TABLE genres ALTER COLUMN genre_id RESTART WITH 1");
 
-        // Инициализация справочника рейтингов MPA
-        jdbcTemplate.update("INSERT INTO mpa_ratings (mpa_rating) VALUES ('G')");
-        jdbcTemplate.update("INSERT INTO mpa_ratings (mpa_rating) VALUES ('PG')");
-        jdbcTemplate.update("INSERT INTO mpa_ratings (mpa_rating) VALUES ('PG_13')");
-        jdbcTemplate.update("INSERT INTO mpa_ratings (mpa_rating) VALUES ('R')");
+        // Инициализация справочника рейтингов MPA с явным mpa_id
+        jdbcTemplate.update("INSERT INTO mpa_ratings (mpa_id, mpa_rating) VALUES (1, 'G')");
+        jdbcTemplate.update("INSERT INTO mpa_ratings (mpa_id, mpa_rating) VALUES (2, 'PG')");
+        jdbcTemplate.update("INSERT INTO mpa_ratings (mpa_id, mpa_rating) VALUES (3, 'PG-13')");
+        jdbcTemplate.update("INSERT INTO mpa_ratings (mpa_id, mpa_rating) VALUES (4, 'R')");
+        jdbcTemplate.update("INSERT INTO mpa_ratings (mpa_id, mpa_rating) VALUES (5, 'NC-17')");
 
-        // Инициализация справочника жанров (названия соответствуют enum Genre)
-        jdbcTemplate.update("INSERT INTO genres (genre_id, genre_name) VALUES (1, 'COMEDY')");
-        jdbcTemplate.update("INSERT INTO genres (genre_id, genre_name) VALUES (2, 'DRAMA')");
+        // Инициализация справочника жанров
+        jdbcTemplate.update("INSERT INTO genres (genre_id, genre_name) VALUES (1, 'Комедия')");
+        jdbcTemplate.update("INSERT INTO genres (genre_id, genre_name) VALUES (2, 'Драма')");
+        jdbcTemplate.update("INSERT INTO genres (genre_id, genre_name) VALUES (3, 'Мультфильм')");
+        jdbcTemplate.update("INSERT INTO genres (genre_id, genre_name) VALUES (4, 'Триллер')");
+        jdbcTemplate.update("INSERT INTO genres (genre_id, genre_name) VALUES (5, 'Документальный')");
+        jdbcTemplate.update("INSERT INTO genres (genre_id, genre_name) VALUES (6, 'Боевик')");
     }
 
     /**
@@ -184,8 +191,14 @@ class FilmoRateIntegrationTests {
         film.setDescription("A test film");
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
         film.setDuration(120);
-        film.setMpa("PG_13");
-        film.setGenres(Collections.singletonList(1)); // ID жанра COMEDY
+        MpaRatingDto mpa = new MpaRatingDto();
+        mpa.setId(3);
+        mpa.setName("PG-13");
+        film.setMpa(mpa);
+        GenreDto genre = new GenreDto();
+        genre.setId(1);
+        genre.setName("Комедия");
+        film.setGenres(Collections.singletonList(genre));
         film = filmStorage.create(film);
 
         FilmDto finalFilm = film;
@@ -200,8 +213,9 @@ class FilmoRateIntegrationTests {
                                 .hasFieldOrPropertyWithValue("description", "A test film")
                                 .hasFieldOrPropertyWithValue("releaseDate", LocalDate.of(2000, 1, 1))
                                 .hasFieldOrPropertyWithValue("duration", 120)
-                                .hasFieldOrPropertyWithValue("mpa", "PG_13")
-                                .hasFieldOrPropertyWithValue("genres", Collections.singletonList(1))
+                                .satisfies(filmDto -> assertThat(filmDto.getMpa().getId()).isEqualTo(3))
+                                .satisfies(filmDto -> assertThat(filmDto.getGenres()).hasSize(1)
+                                        .allSatisfy(g -> assertThat(g.getId()).isEqualTo(1)))
                 );
     }
 
@@ -215,8 +229,14 @@ class FilmoRateIntegrationTests {
         film1.setDescription("Description 1");
         film1.setReleaseDate(LocalDate.of(2001, 2, 2));
         film1.setDuration(100);
-        film1.setMpa("PG");
-        film1.setGenres(Collections.singletonList(1)); // ID жанра COMEDY
+        MpaRatingDto mpa1 = new MpaRatingDto();
+        mpa1.setId(2);
+        mpa1.setName("PG");
+        film1.setMpa(mpa1);
+        GenreDto genre1 = new GenreDto();
+        genre1.setId(1);
+        genre1.setName("Комедия");
+        film1.setGenres(Collections.singletonList(genre1));
         filmStorage.create(film1);
 
         FilmDto film2 = new FilmDto();
@@ -224,8 +244,14 @@ class FilmoRateIntegrationTests {
         film2.setDescription("Description 2");
         film2.setReleaseDate(LocalDate.of(2002, 3, 3));
         film2.setDuration(110);
-        film2.setMpa("R");
-        film2.setGenres(Collections.singletonList(2)); // ID жанра DRAMA
+        MpaRatingDto mpa2 = new MpaRatingDto();
+        mpa2.setId(4);
+        mpa2.setName("R");
+        film2.setMpa(mpa2);
+        GenreDto genre2 = new GenreDto();
+        genre2.setId(2);
+        genre2.setName("Драма");
+        film2.setGenres(Collections.singletonList(genre2));
         filmStorage.create(film2);
 
         List<FilmDto> films = (List<FilmDto>) filmStorage.findAll();
@@ -233,12 +259,13 @@ class FilmoRateIntegrationTests {
         assertThat(films).hasSize(2)
                 .anySatisfy(f -> assertThat(f)
                         .hasFieldOrPropertyWithValue("name", "Film 1")
-                        .hasFieldOrPropertyWithValue("genres", Collections.singletonList(1)))
+                        .satisfies(filmDto -> assertThat(filmDto.getGenres()).hasSize(1)
+                                .allSatisfy(g -> assertThat(g.getId()).isEqualTo(1))))
                 .anySatisfy(f -> assertThat(f)
                         .hasFieldOrPropertyWithValue("name", "Film 2")
-                        .hasFieldOrPropertyWithValue("genres", Collections.singletonList(2)));
+                        .satisfies(filmDto -> assertThat(filmDto.getGenres()).hasSize(1)
+                                .allSatisfy(g -> assertThat(g.getId()).isEqualTo(2))));
     }
-
     /**
      * Проверяет обновление фильма.
      */
@@ -249,8 +276,14 @@ class FilmoRateIntegrationTests {
         film.setDescription("Original description");
         film.setReleaseDate(LocalDate.of(2003, 4, 4));
         film.setDuration(130);
-        film.setMpa("G");
-        film.setGenres(Collections.singletonList(1)); // ID жанра COMEDY
+        MpaRatingDto mpa = new MpaRatingDto();
+        mpa.setId(1);
+        mpa.setName("G");
+        film.setMpa(mpa);
+        GenreDto genre = new GenreDto();
+        genre.setId(1);
+        genre.setName("Комедия");
+        film.setGenres(Collections.singletonList(genre));
         film = filmStorage.create(film);
 
         FilmDto finalFilm = film;
@@ -260,8 +293,14 @@ class FilmoRateIntegrationTests {
         updatedFilm.setDescription("Updated description");
         updatedFilm.setReleaseDate(LocalDate.of(2004, 5, 5));
         updatedFilm.setDuration(140);
-        updatedFilm.setMpa("PG_13");
-        updatedFilm.setGenres(Collections.singletonList(2)); // ID жанра DRAMA
+        MpaRatingDto updatedMpa = new MpaRatingDto();
+        updatedMpa.setId(3);
+        updatedMpa.setName("PG-13");
+        updatedFilm.setMpa(updatedMpa);
+        GenreDto updatedGenre = new GenreDto();
+        updatedGenre.setId(2);
+        updatedGenre.setName("Драма");
+        updatedFilm.setGenres(Collections.singletonList(updatedGenre));
         filmStorage.update(updatedFilm);
 
         Optional<FilmDto> updatedFilmOptional = filmStorage.findById(film.getId());
@@ -275,8 +314,9 @@ class FilmoRateIntegrationTests {
                                 .hasFieldOrPropertyWithValue("description", "Updated description")
                                 .hasFieldOrPropertyWithValue("releaseDate", LocalDate.of(2004, 5, 5))
                                 .hasFieldOrPropertyWithValue("duration", 140)
-                                .hasFieldOrPropertyWithValue("mpa", "PG_13")
-                                .hasFieldOrPropertyWithValue("genres", Collections.singletonList(2))
+                                .satisfies(filmDto -> assertThat(filmDto.getMpa().getId()).isEqualTo(3))
+                                .satisfies(filmDto -> assertThat(filmDto.getGenres()).hasSize(1)
+                                        .allSatisfy(g -> assertThat(g.getId()).isEqualTo(2)))
                 );
     }
 
@@ -290,8 +330,14 @@ class FilmoRateIntegrationTests {
         film.setDescription("To be deleted");
         film.setReleaseDate(LocalDate.of(2005, 6, 6));
         film.setDuration(150);
-        film.setMpa("R");
-        film.setGenres(Collections.singletonList(1)); // ID жанра COMEDY
+        MpaRatingDto mpa = new MpaRatingDto();
+        mpa.setId(4);
+        mpa.setName("R");
+        film.setMpa(mpa);
+        GenreDto genre = new GenreDto();
+        genre.setId(1);
+        genre.setName("Комедия");
+        film.setGenres(Collections.singletonList(genre));
         film = filmStorage.create(film);
 
         FilmDto finalFilm = film;

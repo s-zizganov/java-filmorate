@@ -72,7 +72,7 @@ public class ReferenceController {
         List<MpaRatingDto> ratingDtos = ratings.stream()
                 .map(rating -> {
                     MpaRatingDto dto = new MpaRatingDto();
-                    dto.setId(rating.getRating());
+                    dto.setId(rating.ordinal() + 1); // ID соответствует порядку в enum, начиная с 1
                     dto.setName(rating.getRating());
                     return dto;
                 })
@@ -83,13 +83,13 @@ public class ReferenceController {
 
     // Получение рейтинга MPA по ID (GET /mpa/{id})
     @GetMapping("/mpa/{id}")
-    public MpaRatingDto getMpaRatingById(@PathVariable String id) {
+    public MpaRatingDto getMpaRatingById(@PathVariable Integer id) {
         log.info("Получен запрос на получение рейтинга MPA с ID {}", id);
         // Получаем рейтинг по ID из DAO
         MpaRating rating = mpaRatingDao.findById(id);
         // Преобразуем MpaRating в MpaRatingDto
         MpaRatingDto dto = new MpaRatingDto();
-        dto.setId(rating.getRating());
+        dto.setId(id);
         dto.setName(rating.getRating());
         log.info("Найден рейтинг MPA: {}", dto);
         return dto;

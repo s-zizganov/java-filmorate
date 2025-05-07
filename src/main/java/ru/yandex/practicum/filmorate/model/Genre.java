@@ -4,12 +4,12 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 // Перечисление Genre представляет возможные жанры фильма
 public enum Genre {
-    COMEDY("Комедия"),       // Жанр "Комедия"
-    DRAMA("Драма"),         // Жанр "Драма"
-    ANIMATION("Мультфильм"), // Жанр "Мультфильм"
-    THRILLER("Триллер"),     // Жанр "Триллер"
-    DOCUMENTARY("Документальный"), // Жанр "Документальный"
-    ACTION("Боевик");        // Жанр "Боевик"
+    COMEDY("Комедия"),
+    DRAMA("Драма"),
+    ANIMATION("Мультфильм"),
+    THRILLER("Триллер"),
+    DOCUMENTARY("Документальный"),
+    ACTION("Боевик");
 
     // Поле для хранения названия жанра на русском языке
     private final String name;

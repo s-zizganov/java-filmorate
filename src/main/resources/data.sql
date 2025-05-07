@@ -8,9 +8,9 @@ INSERT INTO genres (genre_id, genre_name) VALUES
 (6, 'Боевик');
 
 -- Инициализация MPA-рейтингов
-INSERT INTO mpa_ratings (mpa_rating) VALUES
-('G'),
-('PG'),
-('PG-13'),
-('R'),
-('NC-17');
+INSERT INTO mpa_ratings (mpa_id, mpa_rating) VALUES
+(1, 'G'),
+(2, 'PG'),
+(3, 'PG-13'),
+(4, 'R'),
+(5, 'NC-17');

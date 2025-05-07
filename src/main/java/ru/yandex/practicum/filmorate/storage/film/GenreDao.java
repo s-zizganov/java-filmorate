@@ -11,6 +11,7 @@ import ru.yandex.practicum.filmorate.model.Genre;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * DAO (Data Access Object) для работы с жанрами фильмов через базу данных.
@@ -23,6 +24,16 @@ public class GenreDao {
     private static final Logger log = LoggerFactory.getLogger(GenreDao.class);
     // JdbcTemplate для взаимодействия с базой данных
     private final JdbcTemplate jdbcTemplate;
+
+    // Маппинг genre_id на Genre
+    private static final Map<Integer, Genre> ID_TO_GENRE = Map.of(
+            1, Genre.COMEDY,
+            2, Genre.DRAMA,
+            3, Genre.ANIMATION,
+            4, Genre.THRILLER,
+            5, Genre.DOCUMENTARY,
+            6, Genre.ACTION
+    );
 
     /**
      * Получить список всех жанров из базы данных.
@@ -58,7 +69,10 @@ public class GenreDao {
      */
     private Genre mapRowToGenre(ResultSet rs, int rowNum) throws SQLException {
         int id = rs.getInt("genre_id");
-        String name = rs.getString("genre_name");
-        return Genre.valueOf(name);
+        Genre genre = ID_TO_GENRE.get(id);
+        if (genre == null) {
+            throw new NotFoundException("Жанр с ID " + id + " не найден");
+        }
+        return genre;
     }
 }

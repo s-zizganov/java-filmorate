@@ -106,9 +106,9 @@ class ReferenceControllerTest {
 
         mockMvc.perform(get("/mpa"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value("G"))
+                .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].name").value("G"))
-                .andExpect(jsonPath("$[1].id").value("PG"))
+                .andExpect(jsonPath("$[1].id").value(2))
                 .andExpect(jsonPath("$[1].name").value("PG"));
     }
 
@@ -117,11 +117,11 @@ class ReferenceControllerTest {
      */
     @Test
     void shouldGetMpaRatingById() throws Exception {
-        when(mpaRatingDao.findById("G")).thenReturn(MpaRating.G);
+        when(mpaRatingDao.findById(1)).thenReturn(MpaRating.G);
 
-        mockMvc.perform(get("/mpa/G"))
+        mockMvc.perform(get("/mpa/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("G"))
+                .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("G"));
     }
 
@@ -130,11 +130,11 @@ class ReferenceControllerTest {
      */
     @Test
     void shouldFailWhenMpaRatingNotFound() throws Exception {
-        when(mpaRatingDao.findById("INVALID")).thenThrow(new ru.yandex.practicum.filmorate.exception.NotFoundException("Рейтинг MPA с ID INVALID не найден"));
+        when(mpaRatingDao.findById(999)).thenThrow(new ru.yandex.practicum.filmorate.exception.NotFoundException("Рейтинг MPA с ID 999 не найден"));
 
-        mockMvc.perform(get("/mpa/INVALID"))
+        mockMvc.perform(get("/mpa/999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("Not found"))
-                .andExpect(jsonPath("$.message").value("Рейтинг MPA с ID INVALID не найден"));
+                .andExpect(jsonPath("$.message").value("Рейтинг MPA с ID 999 не найден"));
     }
 }
