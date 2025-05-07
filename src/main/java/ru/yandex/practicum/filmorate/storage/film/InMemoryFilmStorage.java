@@ -8,6 +8,10 @@ import java.util.*;
 public class InMemoryFilmStorage implements FilmStorage {
 
     private final Map<Long, FilmDto> films = new HashMap<>();
+    // Список допустимых MPA ID на основе data.sql
+    private static final Set<Integer> VALID_MPA_IDS = new HashSet<>(Arrays.asList(1, 2, 3, 4, 5));
+    // Список допустимых жанров ID на основе data.sql
+    private static final Set<Integer> VALID_GENRE_IDS = new HashSet<>(Arrays.asList(1, 2, 3, 4, 5, 6));
 
     // Метод для создания нового фильма
     @Override
@@ -42,6 +46,16 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public Collection<FilmDto> findAll() {
         return films.values();
+    }
+
+    @Override
+    public boolean existsMpa(Integer mpaId) {
+        return VALID_MPA_IDS.contains(mpaId);
+    }
+
+    @Override
+    public boolean existsGenre(Integer genreId) {
+        return VALID_GENRE_IDS.contains(genreId);
     }
 
     // Метод для генерации следующего уникального ID.

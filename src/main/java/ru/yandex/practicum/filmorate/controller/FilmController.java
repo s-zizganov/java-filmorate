@@ -73,6 +73,20 @@ public class FilmController {
                 }
             }
         }
+        // Проверка существования MPA
+        if (!filmStorage.existsMpa(film.getMpa().getId())) {
+            log.error("Ошибка валидации: Рейтинг MPA с ID {} не существует", film.getMpa().getId());
+            throw new ValidationException("Рейтинг MPA с ID " + film.getMpa().getId() + " не существует");
+        }
+        // Проверка существования жанров
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            for (GenreDto genre : film.getGenres()) {
+                if (!filmStorage.existsGenre(genre.getId())) {
+                    log.error("Ошибка валидации: Жанр с ID {} не существует", genre.getId());
+                    throw new ValidationException("Жанр с ID " + genre.getId() + " не существует");
+                }
+            }
+        }
         log.debug("Валидация фильма успешно завершена");
     }
 

@@ -208,8 +208,12 @@ public class FilmDbStorage implements FilmStorage {
      */
     private void saveGenres(FilmDto film) {
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            // Удаляем дубликаты жанров
+            HashSet<GenreDto> uniqueGenres = new HashSet<>(film.getGenres());
             String sql = "INSERT INTO film_genre (film_id, genre_id) VALUES (?, ?)";
-            film.getGenres().forEach(genre -> jdbcTemplate.update(sql, film.getId(), genre.getId()));
+            for (GenreDto genre : uniqueGenres) {
+                jdbcTemplate.update(sql, film.getId(), genre.getId());
+            }
         }
     }
 
@@ -221,5 +225,23 @@ public class FilmDbStorage implements FilmStorage {
             String sql = "INSERT INTO film_likes (film_id, user_id) VALUES (?, ?)";
             film.getLikes().forEach(userId -> jdbcTemplate.update(sql, film.getId(), userId));
         }
+    }
+
+    /**
+     * Проверка существования рейтинга MPA.
+     */
+    public boolean existsMpa(Integer mpaId) {
+        String sql = "SELECT COUNT(*) FROM mpa_ratings WHERE mpa_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, mpaId);
+        return count != null && count > 0;
+    }
+
+    /**
+     * Проверка существования жанра.
+     */
+    public boolean existsGenre(Integer genreId) {
+        String sql = "SELECT COUNT(*) FROM genres WHERE genre_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, genreId);
+        return count != null && count > 0;
     }
 }

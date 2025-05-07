@@ -82,6 +82,10 @@ class FilmControllerTest {
         genre.setId(1); // Соответствует "Комедия" (как в FilmoRateIntegrationTests)
         genre.setName("Комедия");
         film.setGenres(Collections.singletonList(genre));
+
+        // Настройка мока для методов existsMpa и existsGenre
+        when(filmStorage.existsMpa(3)).thenReturn(true); // MPA ID 3 существует
+        when(filmStorage.existsGenre(1)).thenReturn(true); // Жанр ID 1 существует
     }
 
     @Test // Проверяет, что фильм можно успешно получить по ID через GET-запрос
@@ -217,6 +221,9 @@ class FilmControllerTest {
         when(filmStorage.findById(createdFilm.getId())).thenReturn(Optional.of(createdFilm));
         // Настраиваем мок filmStorage: при вызове update с любым фильмом возвращаем обновлённый фильм (updatedFilm)
         when(filmStorage.update(any(FilmDto.class))).thenReturn(updatedFilm);
+        // Настройка мока для новых значений MPA и жанра
+        when(filmStorage.existsMpa(4)).thenReturn(true); // MPA ID 4 существует
+        when(filmStorage.existsGenre(2)).thenReturn(true); // Жанр ID 2 существует
 
         // Выполняем PUT-запрос на /films через MockMvc, чтобы обновить фильм
         mockMvc.perform(put("/films")
