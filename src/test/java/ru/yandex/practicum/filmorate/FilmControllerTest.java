@@ -10,13 +10,15 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.yandex.practicum.filmorate.controller.FilmController;
-import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.FilmDto;
 import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -41,7 +43,7 @@ class FilmControllerTest {
 
     // Мок объект filmStorage для имитации хранилища фильмов
     // @MockBean создаёт мок и добавляет его в контекст Spring, заменяя реальное хранилище
-    @MockBean
+    @MockBean(name = "filmDbStorage")
     private FilmStorage filmStorage;
 
     // Мок-объект filmService для имитации сервиса фильмов
@@ -49,15 +51,18 @@ class FilmControllerTest {
     @MockBean
     private FilmService filmService;
 
-    // Переменная film для хранения тестового объекта Film, который будем использовать в тестах
-    private Film film;
+    @MockBean(name = "userDbStorage")
+    private UserStorage userStorage;
+
+    // Переменная film для хранения тестового объекта FilmDto, который будем использовать в тестах
+    private FilmDto film;
 
     // Метод setUp выполняется перед каждым тестом (аннотация @BeforeEach)
     // Он подготавливает тестовые данные, которые будут использоваться в тестах
     @BeforeEach
     void setUp() {
-        // Создаём новый объект Film для тестов
-        film = new Film();
+        // Создаём новый объект FilmDto для тестов
+        film = new FilmDto();
         film.setName("Test Film");
         film.setDescription("A test film description");
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
@@ -104,10 +109,10 @@ class FilmControllerTest {
 
     @Test // Проверяет, что фильм можно успешно создать через POST-запрос
     void shouldCreateFilmSuccessfully() throws Exception {
-        // Настраиваем мок filmStorage: при вызове create с любым фильмом (any(Film.class)) возвращаем фильм с id = 1
-        when(filmStorage.create(any(Film.class))).thenAnswer(invocation -> {
+        // Настраиваем мок filmStorage: при вызове create с любым фильмом (any(FilmDto.class)) возвращаем фильм с id = 1
+        when(filmStorage.create(any(FilmDto.class))).thenAnswer(invocation -> {
             // Получаем фильм, который передали в метод create
-            Film filmToCreate = invocation.getArgument(0);
+            FilmDto filmToCreate = invocation.getArgument(0);
             // Устанавливаем ID фильма равным 1
             filmToCreate.setId(1L);
             // Возвращаем фильм с установленным Id
@@ -133,10 +138,10 @@ class FilmControllerTest {
 
     @Test  // Проверяет, что существующий фильм можно успешно обновить через PUT-запрос
     void shouldUpdateFilmSuccessfully() throws Exception {
-        // Настраиваем мок filmStorage: при вызове create с любым фильмом (any(Film.class)) возвращаем фильм с ID = 1
-        when(filmStorage.create(any(Film.class))).thenAnswer(invocation -> {
+        // Настраиваем мок filmStorage: при вызове create с любым фильмом (any(FilmDto.class)) возвращаем фильм с ID = 1
+        when(filmStorage.create(any(FilmDto.class))).thenAnswer(invocation -> {
             // Получаем фильм, который передали в метод create
-            Film filmToCreate = invocation.getArgument(0);
+            FilmDto filmToCreate = invocation.getArgument(0);
             // Устанавливаем ID фильма равным 1
             filmToCreate.setId(1L);
             // Возвращаем фильм с установленным ID
@@ -155,11 +160,11 @@ class FilmControllerTest {
                 // Получаем содержимое ответа в виде строки
                 .andReturn().getResponse().getContentAsString();
 
-        // Преобразуем JSON-ответ (строку) обратно в объект Film, чтобы получить созданный фильм
-        Film createdFilm = objectMapper.readValue(response, Film.class);
+        // Преобразуем JSON-ответ (строку) обратно в объект FilmDto, чтобы получить созданный фильм
+        FilmDto createdFilm = objectMapper.readValue(response, FilmDto.class);
 
-        // Создаём новый объект Film для обновления
-        Film updatedFilm = new Film();
+        // Создаём новый объект FilmDto для обновления
+        FilmDto updatedFilm = new FilmDto();
         // Устанавливаем ID обновляемого фильма равным ID созданного фильма
         updatedFilm.setId(createdFilm.getId());
         // Устанавливаем новое название фильма
@@ -174,7 +179,7 @@ class FilmControllerTest {
         // Настраиваем мок filmStorage: при вызове findById с ID созданного фильма возвращаем Optional с созданным фильмом
         when(filmStorage.findById(createdFilm.getId())).thenReturn(Optional.of(createdFilm));
         // Настраиваем мок filmStorage: при вызове update с любым фильмом возвращаем обновлённый фильм (updatedFilm)
-        when(filmStorage.update(any(Film.class))).thenReturn(updatedFilm);
+        when(filmStorage.update(any(FilmDto.class))).thenReturn(updatedFilm);
 
         // Выполняем PUT-запрос на /films через MockMvc, чтобы обновить фильм
         mockMvc.perform(put("/films")
@@ -194,9 +199,9 @@ class FilmControllerTest {
     @Test // Проверяет, что можно получить список всех фильмов через GET-запрос
     void shouldGetAllFilms() throws Exception {
         // Настраиваем мок filmStorage: при вызове create с любым фильмом возвращаем фильм с ID = 1
-        when(filmStorage.create(any(Film.class))).thenAnswer(invocation -> {
+        when(filmStorage.create(any(FilmDto.class))).thenAnswer(invocation -> {
             // Получаем фильм, который передали в метод create
-            Film filmToCreate = invocation.getArgument(0);
+            FilmDto filmToCreate = invocation.getArgument(0);
             // Устанавливаем ID фильма равным 1
             filmToCreate.setId(1L);
             return filmToCreate;
@@ -285,7 +290,7 @@ class FilmControllerTest {
         // Настраиваем мок filmStorage: при вызове findById с ID = 1 возвращаем Optional с нашим тестовым фильмом
         when(filmStorage.findById(1L)).thenReturn(Optional.of(film));
         // Настраиваем мок filmStorage: при вызове update с любым фильмом возвращаем переданный фильм
-        when(filmStorage.update(any(Film.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(filmStorage.update(any(FilmDto.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         mockMvc.perform(put("/films/1/like/1"))
                 .andExpect(status().isOk());
@@ -294,7 +299,7 @@ class FilmControllerTest {
     @Test  // Проверяет, что лайк можно успешно удалить через DELETE-запрос
     void shouldRemoveLike() throws Exception {
         when(filmStorage.findById(1L)).thenReturn(Optional.of(film));
-        when(filmStorage.update(any(Film.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(filmStorage.update(any(FilmDto.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         mockMvc.perform(delete("/films/1/like/1"))
                 .andExpect(status().isOk());
@@ -303,14 +308,13 @@ class FilmControllerTest {
     @Test  // Проверяет, что можно получить список популярных фильмов через GET-запрос
     void shouldGetPopularFilms() throws Exception {
         // Создаём второй тестовый фильм (популярный, с двумя лайками)
-        Film film2 = new Film();
+        FilmDto film2 = new FilmDto();
         film2.setId(2L);
         film2.setName("Popular Film");
         film2.setDescription("A popular film");
         film2.setReleaseDate(LocalDate.of(2020, 1, 1));
         film2.setDuration(100);
-        film2.getLikes().add(1L);
-        film2.getLikes().add(2L);
+        film2.setLikes(Set.of(1L, 2L));
 
         // Настраиваем мок filmService: при вызове getPopularFilms с параметром 10 возвращаем список с
         // двумя фильмами (film2 и film)

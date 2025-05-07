@@ -1,12 +1,10 @@
 package ru.yandex.practicum.filmorate.storage.user;
 
-import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.*;
 
-// Аннотация @Component указывает, что этот класс является компонентом Spring (будет автоматически создан Spring)
-@Component
+
 // Класс InMemoryUserStorage реализует интерфейс UserStorage, храня пользователей в памяти (в HashMap)
 public class InMemoryUserStorage implements UserStorage {
 

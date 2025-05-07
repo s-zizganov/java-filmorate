@@ -5,7 +5,9 @@ import lombok.Data;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -22,4 +24,6 @@ public class Film {
     Set<Long> likes = new HashSet<>(); // Список ID пользователей,
     // которые поставили лайк фильму (тип Set<Long>)
     // Инициализируем его как пустой HashSet, чтобы избежать NullPointerException
+    List<Genre> genres = new ArrayList<>();
+    MpaRating mpa;
 }

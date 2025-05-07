@@ -1,22 +1,45 @@
 package ru.yandex.practicum.filmorate.storage.film;
 
-import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.FilmDto;
 
 import java.util.Collection;
 import java.util.Optional;
 
-// Интерфейс FilmStorage определяет методы для работы с хранилищем фильмов
+/**
+ * Интерфейс для работы с хранилищем фильмов.
+ * Определяет основные методы для создания, обновления, удаления, поиска и получения фильмов.
+ */
 public interface FilmStorage {
+    /**
+     * Создать новый фильм.
+     * @param film объект фильма
+     * @return созданный фильм
+     */
+    FilmDto create(FilmDto film);
 
-    Film create(Film film);
+    /**
+     * Обновить существующий фильм.
+     * @param film объект фильма с обновлёнными данными
+     * @return обновлённый фильм
+     */
+    FilmDto update(FilmDto film);
 
-    Film update(Film film);
-
+    /**
+     * Удалить фильм по идентификатору.
+     * @param id идентификатор фильма
+     */
     void delete(Long id);
 
-    // Метод findById для поиска фильма по ID
-    Optional<Film> findById(Long id);
+    /**
+     * Найти фильм по идентификатору.
+     * @param id идентификатор фильма
+     * @return Optional с фильмом, если найден
+     */
+    Optional<FilmDto> findById(Long id);
 
-    // Метод findAll для получения всех фильмов
-    Collection<Film> findAll();
+    /**
+     * Получить все фильмы.
+     * @return коллекция всех фильмов
+     */
+    Collection<FilmDto> findAll();
 }
