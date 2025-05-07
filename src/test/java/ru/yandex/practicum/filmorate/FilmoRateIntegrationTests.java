@@ -266,6 +266,7 @@ class FilmoRateIntegrationTests {
                         .satisfies(filmDto -> assertThat(filmDto.getGenres()).hasSize(1)
                                 .allSatisfy(g -> assertThat(g.getId()).isEqualTo(2))));
     }
+
     /**
      * Проверяет обновление фильма.
      */
