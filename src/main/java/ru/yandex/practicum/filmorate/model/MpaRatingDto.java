@@ -1,15 +1,18 @@
 package ru.yandex.practicum.filmorate.model;
 
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.experimental.FieldDefaults;
 
 /**
  * DTO (Data Transfer Object) для передачи информации о рейтинге MPA между слоями приложения.
  * Используется для обмена данными с клиентом и между сервисами.
  */
 @Data
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class MpaRatingDto {
     // Идентификатор рейтинга MPA
-    private Integer id;
+    Integer id;
     // Название рейтинга MPA
-    private String name;
+    String name;
 }

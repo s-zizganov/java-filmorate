@@ -1,9 +1,11 @@
 package ru.yandex.practicum.filmorate.model;
 
 
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.FieldDefaults;
 
 /**
  * Класс, представляющий модель дружбы между пользователями в приложении Filmorate.
@@ -15,11 +17,12 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class Friendship {
 
     // Поле friendId — ID друга
-    private Long friendId;
+    Long friendId;
 
     // Поле status — статус дружбы (неподтверждённая или подтверждённая)
-    private FriendshipStatus status;
+    FriendshipStatus status;
 }

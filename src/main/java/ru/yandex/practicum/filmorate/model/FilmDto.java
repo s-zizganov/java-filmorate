@@ -1,6 +1,8 @@
 package ru.yandex.practicum.filmorate.model;
 
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -12,12 +14,13 @@ import java.util.Set;
  * Используется для обмена данными с клиентом и между сервисами.
  */
 @Data
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class FilmDto {
-    private Long id;
-    private String name;
-    private String description;
-    private LocalDate releaseDate;
-    private int duration;
+    Long id;
+    String name;
+    String description;
+    LocalDate releaseDate;
+    int duration;
     // Множество идентификаторов пользователей, поставивших лайк фильму
     private Set<Long> likes = new HashSet<>();
     // Список объектов жанров
