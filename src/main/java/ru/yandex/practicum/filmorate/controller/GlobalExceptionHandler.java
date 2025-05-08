@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ru.yandex.practicum.filmorate.exception.DuplicatedDataException;
+import ru.yandex.practicum.filmorate.exception.NotFoundDataException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 
@@ -63,5 +64,14 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST) // Статус ответа 400
     public Map<String, String> handleDuplicatedDataException(DuplicatedDataException ex) {
         return Map.of("error", "Duplicated data", "message", ex.getMessage());
+    }
+
+    @ExceptionHandler(NotFoundDataException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Map<String, String> handleNotFoundDataException(NotFoundDataException ex) {
+        return Map.of(
+                "error", "Not found",
+                "message", ex.getMessage()
+        );
     }
 }
