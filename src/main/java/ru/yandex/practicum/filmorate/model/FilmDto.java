@@ -22,9 +22,9 @@ public class FilmDto {
     LocalDate releaseDate;
     int duration;
     // Множество идентификаторов пользователей, поставивших лайк фильму
-    private Set<Long> likes = new HashSet<>();
+    Set<Long> likes = new HashSet<>();
     // Список объектов жанров
-    private List<GenreDto> genres;
+    List<GenreDto> genres;
     // Объект рейтинга MPA
-    private MpaRatingDto mpa;
+    MpaRatingDto mpa;
 }
