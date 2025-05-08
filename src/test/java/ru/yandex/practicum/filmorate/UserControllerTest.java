@@ -40,7 +40,8 @@ class UserControllerTest {
 
     // Объявляем мок-объект userStorage для имитации хранилища пользователей
     // @MockBean создаёт мок и добавляет его в контекст Spring, заменяя реальное хранилище
-    @MockBean
+    // Исправлено: добавлен квалификатор name = "userDbStorage" для соответствия ожиданиям UserController
+    @MockBean(name = "userDbStorage")
     private UserStorage userStorage;
 
     // Объявляем мок-объект userService для имитации сервиса пользователей
@@ -312,15 +313,27 @@ class UserControllerTest {
 
     @Test // Проверяет, что друга можно успешно добавить через PUT-запрос
     void shouldAddFriend() throws Exception {
-        // Настраиваем мок userStorage: при вызове findById с ID = 1 возвращаем Optional с нашим тестовым пользователем
+        user.setId(1L);
+        friend.setId(2L);
         when(userStorage.findById(1L)).thenReturn(Optional.of(user));
-        // Настраиваем мок userStorage: при вызове findById с ID = 2 возвращаем Optional с нашим тестовым другом
         when(userStorage.findById(2L)).thenReturn(Optional.of(friend));
-        // Настраиваем мок userStorage: при вызове update с любым пользователем возвращаем переданного пользователя
         when(userStorage.update(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         mockMvc.perform(put("/users/1/friends/2"))
                 .andExpect(status().isOk());
+
+        // Проверяем, что дружба односторонняя
+        when(userService.getFriends(1L)).thenReturn(List.of(friend));
+        when(userService.getFriends(2L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/users/1/friends"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(2));
+
+        mockMvc.perform(get("/users/2/friends"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
     }
 
     @Test // Проверяет, что друга можно успешно удалить через DELETE-запрос

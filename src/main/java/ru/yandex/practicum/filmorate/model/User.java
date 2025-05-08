@@ -5,8 +5,8 @@ import lombok.Data;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Класс User представляет модель пользователя в приложении Filmorate.
@@ -19,5 +19,5 @@ public class User {
     String login;
     String name;
     LocalDate birthday;
-    Set<Long> friends = new HashSet<>(); // Список ID друзей
+    List<Friendship> friends = new ArrayList<>();
 }

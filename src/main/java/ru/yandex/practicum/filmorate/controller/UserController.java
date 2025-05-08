@@ -1,7 +1,9 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.exception.DuplicatedDataException;
@@ -14,7 +16,10 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
-@Slf4j
+/**
+ * Контроллер для обработки HTTP-запросов, связанных с пользователями.
+ * Предоставляет REST API для управления пользователями в приложении Filmorate.
+ */
 @RequestMapping(UserController.BASE_PATH)
 @RestController
 public class UserController {
@@ -25,12 +30,16 @@ public class UserController {
     private static final String FRIEND_PATH = "/{id}/friends/{friendId}";
     // Константа COMMON_FRIENDS_PATH задаёт путь для получения общих друзей
     private static final String COMMON_FRIENDS_PATH = "/{id}/friends/common/{otherId}";
+    // Инициализация логгера через LoggerFactory вместо @Slf4j
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserStorage userStorage;
     private final UserService userService;
 
     @Autowired
-    public UserController(UserStorage userStorage, UserService userService) {
+    public UserController(
+            @Qualifier("userDbStorage") UserStorage userStorage, // Добавлен @Qualifier для выбора userDbStorage
+            UserService userService) {
         this.userStorage = userStorage;
         this.userService = userService;
     }
